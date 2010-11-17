@@ -69,6 +69,8 @@ for package in list_portage_dir():
 	
 processedPackages = set()
 
+progressCount = 0
+progressTotal = len(packageDict)
 # read in processed packages files
 with open('deps.txt') as depFile:
 	for depString in depFile:
@@ -82,6 +84,7 @@ with open('deps.txt') as depFile:
 			else:
 				packageDict[packageName].dependancies.add(packageDict[depName])
 		processedPackages.add(packageName)
+		progressCount += 1
 
 # process remaining packages
 for packageName in packageDict.iterkeys():
@@ -89,7 +92,7 @@ for packageName in packageDict.iterkeys():
 		print('{0} already processed'.format(packageName))
 		print
 		continue
-	print('Processing {0}'.format(packageName))
+	print('Processing {0} ({1} of {2})'.format(packageName, progressCount, progressTotal))
 	depSet = find_direct_dependencies(packageName)
 	print(depSet)
 	for depName in depSet:
@@ -101,4 +104,6 @@ for packageName in packageDict.iterkeys():
 			packageDict[packageName].dependancies.add(packageDict[depName])
 	with open('deps.txt', 'a+') as depFile:
 		depFile.write('{0}\n'.format(packageDict[packageName].__str__()))
+	progressCount += 1
 	print
+	
