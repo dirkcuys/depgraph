@@ -1,13 +1,8 @@
 #! /usr/bin/python
 
-import pygame, os, sys
-from pygame.locals import *
+import os, sys
 import cairo
-
-class App:
-	def __init__(self, packages):
-		self.surface = None
-		self.packages = packages
+import json
 
 class Package:
 	def __init__(self, name):
@@ -24,7 +19,7 @@ class Package:
 		return max + 1
 		
 	def __str__(self):
-		return '{0} {1}'.format(self.name, self.position)
+		return '{0} [{1}]'.format(self.name, ','.join([dep.name for dep in self.dependancies]))
 		
 		
 class SimpleSVG:

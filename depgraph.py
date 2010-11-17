@@ -9,9 +9,20 @@ class Package:
 	def __init__(self, name):
 		self.name = name
 		self.dependancies = set()
-
+		self.position = (0.0, 0.0)
+		
+	def calcLevel(self):
+		max = 0
+		for dep in self.dependancies:
+			depLevel = dep.calcLevel()
+			if depLevel > max:
+				max = depLevel
+		return max + 1
+		
 	def __str__(self):
-		return '{0} -> {1}'.format(self.name, self.dependancies)
+		return '{0} [{1}]'.format(self.name, ','.join([dep.name for dep in self.dependancies]))
+
+
 
 
 def list_portage_dir():
@@ -55,14 +66,39 @@ def find_direct_dependencies(package):
 packageDict = dict()
 for package in list_portage_dir():
 	packageDict[package] = Package(package)
+	
+processedPackages = set()
 
-for package in packageDict.iterkeys():
-	depSet = find_direct_dependencies(package)
-	print depSet
-	for dependancy in depSet:
-		if dependancy not in packageDict:
-			print('### Error, {0} not in packageDict'.format(dependancy))
+# read in processed packages files
+with open('deps.txt') as depFile:
+	for depString in depFile:
+		packageName = depString[0:depString.index(' ')]
+		depList = depString[depString.index('[')+1:depString.index(']')].split(',')
+		for depName in depList:
+			if depName not in packageDict:
+				print
+				print('### Error, {0} not in packageDict'.format(depName))
+				print
+			else:
+				packageDict[packageName].dependancies.add(packageDict[depName])
+		processedPackages.add(packageName)
+
+# process remaining packages
+for packageName in packageDict.iterkeys():
+	if packageName in processedPackages:
+		print('{0} already processed'.format(packageName))
+		print
+		continue
+	print('Processing {0}'.format(packageName))
+	depSet = find_direct_dependencies(packageName)
+	print(depSet)
+	for depName in depSet:
+		if depName not in packageDict:
+			print
+			print('### Error, {0} not in packageDict'.format(depName))
+			print
 		else:
-			packageDict[package].dependancies.add(dependancy)
-	print packageDict[package]
+			packageDict[packageName].dependancies.add(packageDict[depName])
+	with open('deps.txt', 'a+') as depFile:
+		depFile.write('{0}\n'.format(packageDict[packageName].__str__()))
 	print
