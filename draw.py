@@ -69,7 +69,8 @@ def drawGraph(packages):
 			xoffsets[level] = 1
 			
 		package.position = (100*xoff, 100*level)
-		svg.drawText(*package.position, text=package.name)
+		#svg.drawText(*package.position, text=package.name)
+		svg.drawRect(package.position[0], package.position[1], 2, 2)
 		
 	for package in packages.itervalues():
 		for dep in package.dependancies:
