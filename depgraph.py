@@ -1,128 +1,15 @@
 #!/usr/bin/python
 
-import os
-import subprocess
 import re
 import string
-import cairo
 
-class Package:
-	
-	stack = []
-	
-	def __init__(self, name):
-		self.name = name
-		self.dependancies = set()
-		self.position = (0.0, 0.0)
-		self.cache = 0
-		self.rdeps = set()
+from drawutils import SimpleSVG
+from packagegraph import Package
 		
-	def addDep(self, dep):
-		self.dependancies.add(dep)
-		dep.addRDep(self)
-		
-	def addRDep(self, rdep):
-		self.rdeps.add(rdep)
-		
-	def calcLevel(self):
-		if self.name in Package.stack:
-			print('Circular dependancy detected')
-			return 0
-			
-		if self.cache > 0:
-			return self.cache
-			
-		Package.stack.append(self.name)
-		#print('{0}.calcLevel() : callStack = {1}'.format(self.name, stack))
-		max = 0
-		for dep in self.dependancies:
-			depLevel = dep.calcLevel()
-			if depLevel > max:
-				max = depLevel
-		self.cache = max + 1
-		Package.stack.pop()
-		return self.cache
-		
-	def __str__(self):
-		return '{0} [{1}]'.format(self.name, ','.join([dep.name for dep in self.dependancies]))
-
-
-def list_portage_dir():
-	packageList = set()
-	catagoryList = os.listdir('/usr/portage')
-	excludes = ['distfiles', 'eclass', 'header.txt', 'licenses', 'local']
-	excludes += ['metadata', 'profiles', 'scripts', 'skel.ChangeLog']
-	excludes += ['skel.ebuild', 'skel.metadata.xml']
-	
-	for excludeDir in excludes:
-		catagoryList.remove(excludeDir)
-		
-	for catagoryDir in catagoryList:
-		packageDirList = os.listdir('/usr/portage/{0}'.format(catagoryDir))
-		if 'metadata.xml' in packageDirList:
-			packageDirList.remove('metadata.xml')
-
-		for packageDir in packageDirList:
-			packageList.add('{0}/{1}'.format(catagoryDir, packageDir))
-
-	return packageList
-
-
-def find_direct_dependencies(package):
-	print "Checking dependancies for {0}".format(package)
-	command = "equery -C depgraph {0}".format(package)
-	#print command
-	proc = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
-	(outdat, indat) = proc.communicate()
-	depList = list()
-	for dep in outdat.split("\n")[3:-1]:
-		#depList.append(re.sub(r'-[0-9]{1,}.*$', '', dep[8:-3]))
-		depStr = re.sub(r'-[0-9]{1,}.*$', '', string.strip(dep, ' [  0]  ') )
-		if depStr not in  ['', package]:
-			depList.append(depStr)
-	return set(depList)
-
-	
-class SimpleSVG:
-	def __init__(self, filename):
-		self.surface = cairo.SVGSurface(filename, 16384, 8192)
-		self.context = cairo.Context(self.surface)
-		
-	def drawRect(self, x, y, w, h ):
-		self.context.set_source_rgb(0.0, 0.0, 0.0)
-		self.context.set_line_width(1)
-		self.context.rectangle(x, y, w, h)
-		self.context.stroke()
-		
-		
-	def drawText(self, x, y, text):
-		self.context.set_source_rgb(0.0, 0.0, 0.0)
-		self.context.set_line_width(1)
-		self.context.select_font_face("Arial", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-		self.context.set_font_size(10)
-		x_bearing, y_bearing, width, height = self.context.text_extents(text)[:4]
-		self.context.move_to(x - x_bearing, y - height / 2 - y_bearing)
-		self.context.text_path(text)
-		self.context.fill()
-		
-	def drawLine(self, x1, y1, x2, y2):
-		self.context.set_source_rgb(0.0, 0.0, 0.0)
-		self.context.set_line_width(1)
-		self.context.move_to(x1, y1)
-		self.context.line_to(x2, y2)
-		self.context.stroke()
-		
-	def finish(self):
-		print('SimpleSVG.finish');
-		self.surface.write_to_png('test.png')
-		print('SimpleSVG.finish: after write_to_png()');
-		self.surface.finish()
-
-		
-def drawGraph(packages, excludes):
+def drawGraph(packageDict, excludes):
 	svg = SimpleSVG('output.svg')
 	xoffsets = dict()
-	for package in packages:
+	for package in packageDict.itervalues():
 		if package.name in excludes:
 			continue
 		print ('drawing {0}'.format(package.name))
@@ -138,7 +25,9 @@ def drawGraph(packages, excludes):
 		#svg.drawText(*package.position, text=package.name)
 		svg.drawRect(package.position[0] - 3, package.position[1] - 3, 6, 6)
 		
-	for package in packages:
+	for package in packageDict.itervalues():
+		if package.name in excludes:
+			continue
 		print ('drawing {0} dependancies'.format(package.name))
 		for dep in package.dependancies:
 			if dep.name not in excludes:
@@ -177,8 +66,6 @@ def drawPackageDepGraph(packageName, packageDict, excludes):
 	packageDict[packageName].calcLevel()
 	print('{0} dependancies for package {1}'.format(len(deplist), packageName))
 	print('package is level {0}'.format(packageDict[packageName].calcLevel()))
-	print('package is level {0}'.format(packageDict[packageName].calcLevel()))
-	print('package is level {0}'.format(packageDict[packageName].calcLevel()))
 	#drawGraph(deplist, [])
 	#print(','.join([dep.name for dep in deplist]))
 
@@ -192,10 +79,16 @@ processedPackages = set()
 progressCount = 0
 progressTotal = len(packageDict)
 
+completeExclude = ['sys-devel/gettext', 'sys-devel/binutils', 'dev-lang/perl', 'sys-devel/libtool', 'sys-devel/automake']
+completeExclude += ['sys-devel/autoconf', 'sys-devel/m4', 'dev-util/pkgconfig', 'dev-libs/glib', 'dev-lang/python']
+completeExclude += ['x11/libs/gtk+']
+
 with open('deps.txt') as depFile:
 	for depString in depFile:
 		#print('reading "{0}" from deps.txt'.format(depString))
 		packageName = depString[0:depString.index(' ')]
+		if packageName in completeExclude:
+			continue
 		packageDict[packageName] = Package(packageName)
 
 # read in processed packages files
@@ -203,12 +96,15 @@ with open('deps.txt') as depFile:
 	for depString in depFile:
 		#print('reading "{0}" from deps.txt'.format(depString))
 		packageName = depString[0:depString.index(' ')]
+		if packageName in completeExclude:
+			continue
 		depList = depString[depString.index('[')+1:depString.index(']')].split(',')
 		for depName in depList:
 			if depName not in packageDict:
-				print
-				print('### Error, "{0}" not in packageDict'.format(depName))
-				print
+				#print('### Error, "{0}" not in packageDict'.format(depName))
+				pass
+			elif depName in completeExclude:
+				continue
 			else:
 				packageDict[packageName].addDep(packageDict[depName])
 		processedPackages.add(packageName)
@@ -240,19 +136,19 @@ packageNameList.sort()
 #	print packageDict[packageName]
 
 
-#with open('stats2.csv', 'w') as fout:
-#	fout.write('packagename,deps,rdeps,level\n')
-#	for packageName in packageNameList:
-#		pObj = packageDict[packageName]
-#		fout.write('{0},{1},{2},{3}\n'.format(packageName, len(pObj.dependancies), len (pObj.rdeps), pObj.calcLevel()) )
+with open('stats2.csv', 'w') as fout:
+	fout.write('packagename,deps,rdeps,level\n')
+	for packageName in packageNameList:
+		pObj = packageDict[packageName]
+		fout.write('{0},{1},{2},{3}\n'.format(packageName, len(pObj.dependancies), len (pObj.rdeps), pObj.calcLevel()) )
 
 excludeList = ['dev-util/pkgconfig', 'sys-devel/libtool', 'sys-devel/automake', 'sys-devel/autoconf']	
-#drawGraph(packageDict, excludeList)
+drawGraph(packageDict, excludeList)
 
-drawPackageDepGraph('media-libs/libgphoto2', packageDict, excludeList)
+#drawPackageDepGraph('media-libs/libgphoto2', packageDict, excludeList)
 
-print(packageDict['media-libs/libgphoto2'])
-for dep in packageDict['media-libs/libgphoto2'].dependancies:
-	print dep
+#print(packageDict['media-libs/libgphoto2'])
+#for dep in packageDict['media-libs/libgphoto2'].dependancies:
+#	print dep
 
 	
