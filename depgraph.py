@@ -135,7 +135,6 @@ packageNameList.sort()
 #for packageName in packageNameList:
 #	print packageDict[packageName]
 
-
 with open('stats2.csv', 'w') as fout:
 	fout.write('packagename,deps,rdeps,level\n')
 	for packageName in packageNameList:
@@ -151,4 +150,3 @@ drawGraph(packageDict, excludeList)
 #for dep in packageDict['media-libs/libgphoto2'].dependancies:
 #	print dep
 
-	
