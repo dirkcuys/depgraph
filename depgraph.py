@@ -15,6 +15,14 @@ class Package:
 		self.dependancies = set()
 		self.position = (0.0, 0.0)
 		self.cache = 0
+		self.rdeps = set()
+		
+	def addDep(self, dep):
+		self.dependancies.add(dep)
+		dep.addRDep(self)
+		
+	def addRDep(self, rdep):
+		self.rdeps.add(rdep)
 		
 	def calcLevel(self):
 		if self.name in stack:
@@ -147,6 +155,7 @@ processedPackages = set()
 
 progressCount = 0
 progressTotal = len(packageDict)
+
 # read in processed packages files
 with open('deps.txt') as depFile:
 	for depString in depFile:
@@ -159,7 +168,7 @@ with open('deps.txt') as depFile:
 				print('### Error, {0} not in packageDict'.format(depName))
 				print
 			else:
-				packageDict[packageName].dependancies.add(packageDict[depName])
+				packageDict[packageName].addDep(packageDict[depName])
 		processedPackages.add(packageName)
 		progressCount += 1
 
@@ -178,15 +187,22 @@ for packageName in packageDict.iterkeys():
 			print('### Error, {0} not in packageDict'.format(depName))
 			print
 		else:
-			packageDict[packageName].dependancies.add(packageDict[depName])
+			packageDict[packageName].addDep(packageDict[depName])
 	with open('deps.txt', 'a+') as depFile:
 		depFile.write('{0}\n'.format(packageDict[packageName].__str__()))
 	progressCount += 1
 	
-#packageNameList = list(packageDict.iterkeys())
-#packageNameList.sort()
+packageNameList = list(packageDict.iterkeys())
+packageNameList.sort()
 #for packageName in packageNameList:
 #	print packageDict[packageName]
+
+with open('stats.csv', 'w') as fout:
+	fout.write('packagename,deps,rdeps\n')
+	for packageName in packageNameList:
+		pObj = packageDict[packageName]
+		fout.write('{0},{1},{2}\n'.format(packageName, len(pObj.dependancies), len (pObj.rdeps)))
+		#print packageDict[packageName]
 	
-drawGraph(packageDict)
+#drawGraph(packageDict)
 	
