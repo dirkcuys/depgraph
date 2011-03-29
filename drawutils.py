@@ -2,7 +2,8 @@ import cairo
 
 class SimpleSVG:
 	def __init__(self, filename):
-		self.surface = cairo.SVGSurface(filename, 16384, 8192)
+		#self.surface = cairo.SVGSurface(filename, 16384, 8192)
+		self.surface = cairo.SVGSurface(filename, 5000, 5000)
 		self.context = cairo.Context(self.surface)
 		
 	def drawRect(self, x, y, w, h ):
@@ -23,7 +24,7 @@ class SimpleSVG:
 		self.context.fill()
 		
 	def drawLine(self, x1, y1, x2, y2):
-		self.context.paint_with_alpha(0.4)
+		#self.context.paint_with_alpha(0.4)
 		self.context.set_source_rgb(0.0, 0.0, 0.0)
 		self.context.set_line_width(1)
 		self.context.move_to(x1, y1)
