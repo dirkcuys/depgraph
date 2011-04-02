@@ -74,38 +74,49 @@ def drawPackageDepGraph(packageName, packageDict, excludes):
 	#print(','.join([dep.name for dep in deplist]))
 
 def drawCircleGraph(packageDict):
-	
-	svg = SimpleSVG('circle_out.svg')
+	#svg = SimpleSVG('circle_out.svg')
 	package_count = len(packageDict)
 	
-	pygame.init()
+	#pygame.init()
+	#width, height = 16384, 16384
 	width, height = 1024, 1024
-	surface = pygame.display.set_mode((width, height))
 	radius = width/2.0 - 100
+	
+	import Image, ImageDraw, ImageFont
+	image = Image.new('RGBA', (width,height))
+	draw = ImageDraw.Draw(image)
+	arial = ImageFont.truetype('./arialn.ttf', 16)
+	
+	#surface = pygame.display.set_mode((width, height))
 	
 	#calculate x,y positions for packages
 	for index, package in enumerate(packageDict.itervalues()):
 		x = radius*math.cos(index/(0.5*package_count)*math.pi)
 		y = radius*math.sin(index/(0.5*package_count)*math.pi)
 		package.position = (width/2.0 + x, height/2.0 + y)
-		package.colour = (255*random(), 255*random(), 255*random(), 0.4)
+		package.colour = (127 + 128*random(), 127 + 128*random(), 127 + 128*random(), 255)
 		sizeX = len(package.dependancies)
-		sizeY = len(package.rdeps)/10
-		if sizeY < 0.5:
-			sizeY = 1
+		sizeY = len(package.rdeps)
+		#if sizeY < 0.5:
+		#	sizeY = 1
 		
 		rect = (package.position[0] - sizeX/2.0, package.position[1] - sizeY/2.0, sizeX, sizeY)
 		x2 = width/2.0 + (sizeY+radius)*math.cos(index/(0.5*package_count)*math.pi)
 		y2 = height/2.0 + (sizeY+radius)*math.sin(index/(0.5*package_count)*math.pi)
-		#pygame.draw.rect( surface, package.colour, rect, 1)
-		pygame.draw.line( surface, package.colour, package.position, (x2, y2), 1)
+		#pygame.draw.line( surface, package.colour, package.position, (x2, y2), 1)
+		draw.line( package.position + (x2, y2), package.colour)
 		
-		if len(package.dependancies) > 2000 or len(package.rdeps) > 20:
-			text = pygame.font.SysFont('Arial', 9).render(package.name[depString.index('/')+1:], False, package.colour)
+		if len(package.dependancies) > 10 or len(package.rdeps) > 10:
+		#	text = pygame.font.SysFont('Arial', 9).render(package.name[depString.index('/')+1:], False, package.colour)
+			#text = package.name[depString.index('/')+1:]
+			tx = x2
+			ty = y2
 			if index > 0.25*package_count and index < 0.75*package_count:
-				surface.blit(text, (x2 - text.get_width(), y2))
-			else:
-				surface.blit(text, (x2, y2))
+				#surface.blit(text, (x2 - text.get_width(), y2))
+				tx -= draw.textsize(package.name, font=arial)[0]
+				
+			#surface.blit(text, (x2, y2))
+			draw.text((tx, ty), package.name, font=arial, fill=package.colour)
 	
 	for package in packageDict.itervalues():
 		print ('drawing {0} dependancies'.format(package.name))
@@ -115,18 +126,21 @@ def drawCircleGraph(packageDict):
 				x1, y1 = package.position
 				x2, y2 = dep.position
 				#svg.drawLine( x1, y1, x2, y2)
-				pygame.draw.line( surface, dep.colour, (x1, y1), (x2, y2), 1)
+				#pygame.draw.line( surface, dep.colour, (x1, y1), (x2, y2), 1)
+				draw.line((x1, y1, x2, y2), dep.colour)
 				
-	pygame.display.flip()
+	image.save("graph.jpg", "JPEG")
+				
+	#pygame.display.flip()
 		
-	while True:
+	#while True:
 		# only look for and get events we are interested in
-		if pygame.event.peek((QUIT,)):
-			for event in pygame.event.get((QUIT,)):
-				if event.type == QUIT:
-					sys.exit(0)
-				else:
-					print event
+	#	if pygame.event.peek((QUIT,)):
+	#		for event in pygame.event.get((QUIT,)):
+	#			if event.type == QUIT:
+	#				sys.exit(0)
+	#			else:
+	#				print event
 	
 packageDict = {}
 #for package in set(list_portage_dir()):
