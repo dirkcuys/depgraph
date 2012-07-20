@@ -79,24 +79,27 @@ def drawCircleGraph(packageDict):
 	
 	#pygame.init()
 	#width, height = 16384, 16384
-	width, height = 1024, 1024
-	radius = width/2.0 - 100
+	width, height = 4096, 4096
+	radius = width/2.0 - 400
 	
 	import Image, ImageDraw, ImageFont
 	image = Image.new('RGBA', (width,height))
 	draw = ImageDraw.Draw(image)
-	arial = ImageFont.truetype('./arialn.ttf', 16)
+	arial = ImageFont.truetype('./arialn.ttf', 20)
 	
 	#surface = pygame.display.set_mode((width, height))
 	
 	#calculate x,y positions for packages
-	for index, package in enumerate(packageDict.itervalues()):
+	for index, key in enumerate(sorted(packageDict.iterkeys())):
+		package = packageDict[key]
 		x = radius*math.cos(index/(0.5*package_count)*math.pi)
 		y = radius*math.sin(index/(0.5*package_count)*math.pi)
 		package.position = (width/2.0 + x, height/2.0 + y)
-		package.colour = (127 + 128*random(), 127 + 128*random(), 127 + 128*random(), 255)
+		package.colour = (255*random(), 255*random(), 255*random(), 255)
+		while package.colour[0] + package.colour[1] + package.colour[2] < 255:
+			package.colour = (255*random(), 255*random(), 255*random(), 255)
 		sizeX = len(package.dependancies)
-		sizeY = len(package.rdeps)
+		sizeY = math.log(1 + len(package.rdeps)**40)
 		#if sizeY < 0.5:
 		#	sizeY = 1
 		
@@ -108,15 +111,23 @@ def drawCircleGraph(packageDict):
 		
 		if len(package.dependancies) > 10 or len(package.rdeps) > 10:
 		#	text = pygame.font.SysFont('Arial', 9).render(package.name[depString.index('/')+1:], False, package.colour)
-			#text = package.name[depString.index('/')+1:]
+			text = '{0} ({1},{2})'.format(package.name, len(package.dependancies), len(package.rdeps))
 			tx = x2
 			ty = y2
+			tw, th = draw.textsize(text, font=arial)
 			if index > 0.25*package_count and index < 0.75*package_count:
 				#surface.blit(text, (x2 - text.get_width(), y2))
-				tx -= draw.textsize(package.name, font=arial)[0]
+				tx -= draw.textsize(text, font=arial)[0]
+			
+			#move off screen labels	
+			#if tx < 0:
+			#	ty = package.position[1] + package.position[0]/(package.position[0] - x2)*(y2 - package.position[1])
+			#	tx = 0
+			#	if index > 0.5*package_count and index < 0.75*package_count:
+			#		ty -= th
 				
 			#surface.blit(text, (x2, y2))
-			draw.text((tx, ty), package.name, font=arial, fill=package.colour)
+			draw.text((tx, ty), text, font=arial, fill=package.colour)
 	
 	for package in packageDict.itervalues():
 		print ('drawing {0} dependancies'.format(package.name))
@@ -214,11 +225,11 @@ packageNameList = list(packageDict.iterkeys())
 #for packageName in packageNameList:
 #	print packageDict[packageName]
 
-#with open('stats2.csv', 'w') as fout:
-#	fout.write('packagename,deps,rdeps,level\n')
-#	for packageName in packageNameList:
-#		pObj = packageDict[packageName]
-#		fout.write('{0},{1},{2},{3}\n'.format(packageName, len(pObj.dependancies), len (pObj.rdeps), pObj.calcLevel()) )
+with open('stats.csv', 'w') as fout:
+	fout.write('packagename,deps,rdeps,level\n')
+	for packageName in packageNameList:
+		pObj = packageDict[packageName]
+		fout.write('{0},{1},{2},{3}\n'.format(packageName, len(pObj.dependancies), len (pObj.rdeps), pObj.calcLevel()) )
 
 excludeList = ['dev-util/pkgconfig', 'sys-devel/libtool', 'sys-devel/automake', 'sys-devel/autoconf']
 #excludeList = excludeList[:] + completeExclude[:]
