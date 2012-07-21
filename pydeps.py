@@ -63,14 +63,14 @@ def load_graph(base_dir):
 
     for node in node_list.values():
 
-        regex = '^from (?P<module>[\w\.]+) import (?P<sub_module>[\w]+)'
-        regex2 = '^import (?P<module>[\w]+)$'
+        regex = 'from (?P<module>[\w\.]+) import (?P<sub_module>[\w]+)'
+        regex2 = 'import (?P<module>[\w]+)$'
 
         node_file = open(node.filename)
         matches = [re.match(regex, line) for line in node_file if re.match(regex, line)]
         matches += [re.match(regex2, line) for line in node_file if re.match(regex2, line)]
 
-        join = lambda x : '.'.join(x.groups())
+        join = lambda x : '.'.join(x.groups()).strip()
         dep_names = map(join, matches)
 
         

@@ -7,12 +7,12 @@ import Image, ImageDraw, ImageFont
 def draw_circle_graph(packageDict, image_name):
     package_count = len(packageDict)
     
-    width, height = 1080, 1080
+    width, height = 2048, 2048
     radius = width/2.0 - 300
     
     image = Image.new('RGBA', (width,height))
     draw = ImageDraw.Draw(image)
-    arial = ImageFont.truetype('./arialn.ttf', 20)
+    arial = ImageFont.truetype('./ubuntu.ttf', 20)
     
     #calculate x,y positions for packages
     for index, key in enumerate(sorted(packageDict.iterkeys())):
